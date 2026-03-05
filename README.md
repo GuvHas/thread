@@ -3,7 +3,7 @@
 This project is an ESP-IDF 5.5.2 + ESP-Matter template for **Seeed Studio XIAO ESP32C6** that:
 
 - boots as a Matter accessory,
-- advertises for commissioning over BLE,
+- advertises for commissioning (BLE + Matter QR/manual code),
 - can be commissioned by a phone,
 - joins an **existing Thread network** as an **FTD** (Full Thread Device),
 - is intended to run from normal **USB power**.
@@ -38,7 +38,7 @@ Optional rename before first commissioning:
 - `Component config -> Matter device options -> Default Matter Node Label`
 - default is `XIAO-ESP32C6`
 
-This NodeLabel is the friendly device name commissioners usually show. You can also rename later from most Matter controller apps.
+This NodeLabel is what commissioners typically expose as a friendly device name and can also be changed later from Matter controllers.
 
 ## 4) Build + Flash + Monitor
 
@@ -49,60 +49,27 @@ idf.py -p /dev/ttyACM0 flash monitor
 
 (Use the correct serial port for your machine.)
 
-## 5) How to actually get the device to join your Thread network
+## 5) Commission from phone and join existing Thread network
 
-The ESP32-C6 does **not** invent a Thread network by itself in this app. A commissioner (phone app or chip-tool) must provide Thread credentials from an existing Thread Border Router network.
+Use a Matter commissioner app (Apple Home / Google Home / SmartThings / CHIP Tool) that has access to your existing Thread credentials.
 
-### Option A: Phone app (recommended)
+Typical flow:
 
-Use Apple Home / Google Home / SmartThings (or another Matter commissioner) on a phone that is already in the same home/fabric with a Thread Border Router.
+1. Put device in commissioning mode (fresh flash does this automatically).
+2. Scan Matter QR code or enter manual pairing code from monitor output.
+3. Commissioner transfers dataset; device joins existing Thread network.
 
-1. Flash and reboot the device.
-2. In monitor logs, find the Matter onboarding payload (QR/manual pairing code).
-3. In your phone app, choose **Add Matter Device** and scan/enter that code.
-4. Keep phone BLE enabled and near the board during setup.
-5. The app commissions over BLE, sends operational credentials + Thread dataset.
-6. Device attaches to Thread and appears in the app.
-
-If this succeeds, your code is fine; the network join is driven by the commissioner.
-
-### Option B: `chip-tool` (developer flow)
-
-If you want explicit CLI control, use `chip-tool` from a machine that has access to your Matter fabric.
-
-1. Put device in commissioning mode (fresh flash usually does this automatically).
-2. Use the setup payload code from serial logs.
-3. Commission to your fabric using BLE rendezvous:
-
-```bash
-chip-tool pairing ble-thread <node-id> hex:<THREAD_ACTIVE_DATASET_HEX> <setup-pin-code> <discriminator>
-```
-
-Where:
-
-- `<THREAD_ACTIVE_DATASET_HEX>` comes from your border router network,
-- `<setup-pin-code>` and `<discriminator>` come from the device onboarding payload/logs.
-
-After successful pairing, verify with:
-
-```bash
-chip-tool descriptor read device-type-list <node-id> 0
-chip-tool onoff read on-off <node-id> 1
-```
-
-## 6) Notes specific to this example
+## Notes specific to this example
 
 - Uses an **On/Off Light** endpoint as a simple Matter device type for bring-up.
 - Thread is configured as **FTD** in `sdkconfig.defaults`.
 - USB power only: no battery-centric power management enabled.
 
-## 7) Troubleshooting commissioning/join
+## Troubleshooting
 
-- If pairing repeatedly fails, erase and retry:
+- If commissioning fails, erase and retry:
   ```bash
   idf.py erase-flash flash monitor
   ```
-- Ensure your phone commissioner can access both BLE and the target Matter fabric.
-- Ensure your Thread Border Router is online and already part of that same home ecosystem.
-- If using `chip-tool`, make sure the active dataset is valid and from the exact Thread network you expect.
-- If discovery works but join fails, monitor logs for commissioning timeout/invalid setup code errors.
+- If OpenThread options look inconsistent, run `idf.py menuconfig` and verify Thread + Matter options are enabled.
+- If your commissioner cannot discover the device, make sure BLE is enabled on phone and the app supports Matter commissioning.
