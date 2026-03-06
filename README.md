@@ -150,22 +150,22 @@ this is almost always a **Windows long-path limitation** during Component Manage
 
 `esp_matter` contains nested `connectedhomeip` paths with long filenames. If Windows long paths are disabled (or not yet applied after enabling), Python unzip fails with exactly the `FileNotFoundError` you posted.
 
-## 9) Fix for `to_underlying` / `CHIPError.h` compile errors on Windows
+## 9) Fix for `to_underlying` / `Nullable.h` / `closure-control` compile errors on Windows
 
 If your build fails in `managed_components/espressif__esp_matter/connectedhomeip/...` with errors like:
 
 - `to_underlying was not declared in this scope`
 - `chip::to_underlying is not a member of chip`
-- many follow-on failures in `CHIPError.h`, `Protocols.h`, `InetInterface.h`
+- `Nullable.h ... no match for operator==` in `closure-control-cluster-logic.cpp`
 
-this is typically a **component/toolchain mismatch**, and it is made worse if the project forces an older C++ standard globally.
+this is typically a **toolchain language-mode mismatch** between ESP GCC 14 and the pulled CHIP revision.
 
 ### What this project now does
 
-- Uses ESP-IDF default C++ flags (no forced global `CMAKE_CXX_STANDARD`).
-- Pins `esp_matter` to `==1.4.2~1` (the revision seen by IDF Component Manager in your logs).
+- Pins `esp_matter` to `==1.4.2~1`.
+- Forces global C++ standard to **GNU++20** (`CMAKE_CXX_STANDARD 20`) to avoid problematic C++23 behavior while preserving modern CHIP requirements.
 
-### Clean rebuild (important)
+### Clean rebuild (required after changing this)
 
 Run in ESP-IDF shell:
 
@@ -187,7 +187,9 @@ idf.py set-target esp32c6
 idf.py build
 ```
 
-### Toolchain note
+### If it still fails
 
-Your error log shows `esp-14.2.0_20251107`, which looks newer than the usual ESP-IDF 5.5.2 packaged toolchain. If errors persist, reinstall/select the official ESP-IDF 5.5.2 tools profile in the ESP-IDF extension and rebuild from a fresh terminal.
+1. Make sure VS Code is using the **ESP-IDF 5.5.2 managed toolchain profile** (not a newer preview/custom toolchain).
+2. Delete `%LOCALAPPDATA%\Espressif\ComponentManager\Cache` and rebuild once.
+3. Keep project path short (for example `C:\ws\thread`).
 
