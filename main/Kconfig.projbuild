@@ -1,0 +1,10 @@
+menu "Matter device options"
+
+config MATTER_NODE_LABEL
+    string "Default Matter Node Label"
+    default "XIAO-ESP32C6"
+    help
+        Human-friendly node name shown by commissioner apps.
+        This value can still be changed later from Matter commissioning tools.
+
+endmenu
